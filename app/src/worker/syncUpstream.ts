@@ -51,33 +51,33 @@ function extractAppsFromListHtml(html: string, baseUrl: string): UpstreamApp[] {
   const $ = cheerio.load(html);
   const apps: UpstreamApp[] = [];
 
-  // Strategy 1: cards that contain a “查看详情” link
-  $("a")
-    .filter((_, el) => $(el).text().includes("查看详情"))
-    .each((_, el) => {
-      const href = $(el).attr("href");
-      const card = $(el).closest("div");
-      const rawIcon =
-        card.find("img").first().attr("src") ||
-        card.find("img").first().attr("data-src") ||
-        card.find("img").first().attr("data-original") ||
-        "";
-      const iconUrl = rawIcon && isLikelyImageUrl(rawIcon) ? absUrl(rawIcon, baseUrl) : undefined;
-      const name =
-        card.find("h1,h2,h3,h4,strong").first().text().trim() ||
-        $(el).closest("a").text().replace("查看详情", "").trim();
+  // Strategy 1: upstream list page uses .app-card with .app-icon/img and .app-name.
+  // This avoids accidentally picking global images (e.g. QR codes) from outer containers.
+  const appCards = $(".app-card");
+  if (appCards.length > 0) {
+    appCards.each((_, el) => {
+      const card = $(el);
+      const href = card.attr("href");
+      const name = card.find(".app-name").first().text().trim();
       if (!name) return;
 
-      const text = card.text().replace(/\s+/g, " ").trim();
-      // Try to detect a short label (e.g. 官方开发/第三方工具/root必备)
-      const labelMatch = text.match(/(官方开发|第三方工具|root必备)/);
+      const rawIcon =
+        card.find(".app-icon img").first().attr("src") ||
+        card.find(".app-icon img").first().attr("data-src") ||
+        card.find(".app-icon img").first().attr("data-original") ||
+        "";
+      const iconUrl = rawIcon && isLikelyImageUrl(rawIcon) ? absUrl(rawIcon, baseUrl) : undefined;
+
+      const labelText =
+        card.find(".app-tag,.tag,.label").first().text().trim() ||
+        card.text().replace(/\s+/g, " ").trim();
+      const labelMatch = labelText.match(/(官方开发|第三方工具|root必备)/);
       const label = labelMatch?.[1];
 
-      // Try to detect description (first sentence after label)
-      let description = card.find("p").first().text().trim();
-      if (!description) {
-        description = text;
-      }
+      const description =
+        card.find(".app-description").first().text().trim() ||
+        card.find("p").first().text().trim() ||
+        "";
 
       apps.push({
         name,
@@ -87,6 +87,49 @@ function extractAppsFromListHtml(html: string, baseUrl: string): UpstreamApp[] {
         iconUrl,
       });
     });
+  } else {
+    // Strategy 1 (fallback): cards that contain a “查看详情” link
+    $("a")
+      .filter((_, el) => $(el).text().includes("查看详情"))
+      .each((_, el) => {
+        const href = $(el).attr("href");
+        // Prefer the closest "card-like" container; avoid grabbing the entire page wrapper.
+        const card =
+          $(el).closest(".app-card,.card,.item")?.first() ||
+          $(el).closest("a")?.first() ||
+          $(el).parent();
+
+        const rawIcon =
+          card.find("img").first().attr("src") ||
+          card.find("img").first().attr("data-src") ||
+          card.find("img").first().attr("data-original") ||
+          "";
+        const iconUrl = rawIcon && isLikelyImageUrl(rawIcon) ? absUrl(rawIcon, baseUrl) : undefined;
+        const name =
+          card.find("h1,h2,h3,h4,strong").first().text().trim() ||
+          $(el).closest("a").text().replace("查看详情", "").trim();
+        if (!name) return;
+
+        const text = card.text().replace(/\s+/g, " ").trim();
+        // Try to detect a short label (e.g. 官方开发/第三方工具/root必备)
+        const labelMatch = text.match(/(官方开发|第三方工具|root必备)/);
+        const label = labelMatch?.[1];
+
+        // Try to detect description (first sentence after label)
+        let description = card.find("p").first().text().trim();
+        if (!description) {
+          description = text;
+        }
+
+        apps.push({
+          name,
+          label,
+          description,
+          detailUrl: href ? absUrl(href, baseUrl) : undefined,
+          iconUrl,
+        });
+      });
+  }
 
   // Strategy 2 (fallback): headings that look like app names
   if (apps.length === 0) {
@@ -260,6 +303,11 @@ export async function syncUpstreamOnce() {
     const html = await fetchText(upstreamUrl);
     const apps = extractAppsFromListHtml(html, upstreamUrl);
     stats.appsSeen = apps.length;
+    const iconUrlCounts = new Map<string, number>();
+    for (const a of apps) {
+      if (!a.iconUrl) continue;
+      iconUrlCounts.set(a.iconUrl, (iconUrlCounts.get(a.iconUrl) ?? 0) + 1);
+    }
 
     for (const a of apps) {
       const categoryName = a.label || "应用";
@@ -291,8 +339,19 @@ export async function syncUpstreamOnce() {
       // Sync icon (prefer list icon, fallback to detail page). If OSS is configured, upload icon to OSS.
       try {
         let upstreamIconUrl: string | null = a.iconUrl ?? null;
-        if (!upstreamIconUrl && a.detailUrl) {
-          upstreamIconUrl = await findIconLinkFromDetailPage(a.detailUrl, a.name);
+
+        // If the list-page icon is shared by multiple apps, it's often a placeholder.
+        // In that case, prefer a more specific icon from the detail page (if available).
+        if (a.detailUrl) {
+          const isSharedListIcon = upstreamIconUrl
+            ? (iconUrlCounts.get(upstreamIconUrl) ?? 0) > 1
+            : false;
+          if (!upstreamIconUrl || isSharedListIcon) {
+            const detailIconUrl = await findIconLinkFromDetailPage(a.detailUrl, a.name);
+            if (detailIconUrl) {
+              upstreamIconUrl = detailIconUrl;
+            }
+          }
         }
 
         if (upstreamIconUrl) {
