@@ -85,7 +85,7 @@ export default async function Home({
               </p>
             </div>
 
-            <div className="mx-auto w-full max-w-xl">
+            <div className="mx-auto w-full max-w-lg">
               <HeroVideo />
             </div>
           </div>

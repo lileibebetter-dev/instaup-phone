@@ -48,7 +48,7 @@ export function HeroVideo({
   const ariaLabel = useMemo(() => (paused ? "播放视频" : "暂停视频"), [paused]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-sky-200/50 bg-white/70 shadow-[0_18px_60px_-46px_rgba(2,132,199,0.35)] backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-3xl border border-sky-200/50 bg-white/70 shadow-[0_18px_60px_-46px_rgba(2,132,199,0.35)] backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-50/40 via-white/20 to-indigo-50/30" />
       <video
         ref={ref}
