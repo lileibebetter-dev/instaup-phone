@@ -54,6 +54,14 @@ export default async function Home({
             />
           </Link>
           <nav className="flex items-center gap-2">
+            <a
+              href="https://aiagent.instaup.cn/pc/"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-sky-200/60 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
+            >
+              AI数智平台
+            </a>
             <Link
               href="/guide"
               className="rounded-xl border border-sky-200/60 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
