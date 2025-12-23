@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yunmiaoda
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/yunmiaoda?schema=public
+      REDIS_URL: redis://redis:6379
+      UPSTREAM_URL: ${UPSTREAM_URL:-https://down.imai.work/app/app.php}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      OSS_REGION: ${OSS_REGION}
+      OSS_BUCKET: ${OSS_BUCKET}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
+      OSS_PUBLIC_BASE_URL: ${OSS_PUBLIC_BASE_URL}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+    command: >
+      sh -lc "npx prisma db push && npm run start"
+
+  worker:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/yunmiaoda?schema=public
+      REDIS_URL: redis://redis:6379
+      UPSTREAM_URL: ${UPSTREAM_URL:-https://down.imai.work/app/app.php}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      OSS_REGION: ${OSS_REGION}
+      OSS_BUCKET: ${OSS_BUCKET}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
+      OSS_PUBLIC_BASE_URL: ${OSS_PUBLIC_BASE_URL}
+    depends_on:
+      - postgres
+      - redis
+    command: >
+      sh -lc "npx prisma db push && npm run worker:dev"
+
+volumes:
+  postgres_data:
+
+
+
