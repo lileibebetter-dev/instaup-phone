@@ -52,7 +52,7 @@ export function HeroVideo({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-sky-50/40 via-white/20 to-indigo-50/30" />
       <video
         ref={ref}
-        className="relative z-10 aspect-video w-full scale-[1.14] object-cover object-center"
+        className="relative z-10 aspect-video w-full scale-[1.2] object-cover object-center"
         src={src}
         poster={poster}
         muted
