@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum CardKeyStatus {
+  NEW
+  ASSIGNED
+  REDEEMED
+  VOID
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  apps      App[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+model App {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String     @default("")
+  developer   String     @default("")
+  tags        String[]   @default([])
+  iconUrl     String     @default("")
+  status      AppStatus  @default(ACTIVE)
+
+  categoryId  String?
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  releases    Release[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+  @@index([categoryId])
+}
+
+model Release {
+  id          String   @id @default(cuid())
+  appId       String
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  versionName String
+  versionCode Int
+  changelog   String   @default("")
+
+  apkSize     BigInt   @default(0)
+  apkSha256   String   @default("")
+  downloadUrl String   @default("")
+  upstreamUrl String   @default("")
+  publishedAt DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@unique([appId, versionCode])
+  @@index([publishedAt])
+}
+
+model SyncLog {
+  id         String     @id @default(cuid())
+  status     SyncStatus @default(RUNNING)
+  startedAt  DateTime   @default(now())
+  finishedAt DateTime?
+  message    String     @default("")
+  stats      Json?
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  orderNo   String      @unique
+  contact   String      @default("")
+  note      String      @default("")
+  amount    Int         @default(0) // cents
+  status    OrderStatus @default(PENDING)
+  paidAt    DateTime?
+
+  cardKeys   CardKey[]
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
+}
+
+model CardKey {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  status    CardKeyStatus @default(NEW)
+  planType  String        @default("")
+  expireAt  DateTime?
+
+  orderId   String?
+  order     Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime      @default(now())
+
+  @@index([status])
+  @@index([orderId])
+}
+
+
+
+
