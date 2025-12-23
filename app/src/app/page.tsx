@@ -26,7 +26,7 @@ export default async function Home({
           status: "ACTIVE",
           ...(categoryFilter ? { category: { slug: categoryFilter } } : {}),
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: [{ category: { sortOrder: "asc" } }, { updatedAt: "desc" }],
         include: {
           category: true,
           releases: { orderBy: { versionCode: "desc" }, take: 1 },

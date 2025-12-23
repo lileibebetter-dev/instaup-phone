@@ -25,6 +25,14 @@ function absUrl(href: string, base: string) {
   return new URL(href, base).toString();
 }
 
+function categorySortOrder(label?: string) {
+  const v = (label ?? "").trim();
+  if (v === "官方开发") return 0;
+  if (v === "第三方工具") return 1;
+  if (v === "root必备") return 2;
+  return 99;
+}
+
 function isLikelyImageUrl(href: string) {
   const h = href.trim();
   if (!h) return false;
@@ -342,8 +350,8 @@ export async function syncUpstreamOnce() {
 
       const category = await prisma.category.upsert({
         where: { slug: categorySlug },
-        update: { name: categoryName },
-        create: { name: categoryName, slug: categorySlug },
+        update: { name: categoryName, sortOrder: categorySortOrder(a.label) },
+        create: { name: categoryName, slug: categorySlug, sortOrder: categorySortOrder(a.label) },
       });
 
       const app = await prisma.app.upsert({
