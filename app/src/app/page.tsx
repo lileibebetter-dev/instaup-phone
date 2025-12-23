@@ -41,20 +41,21 @@ export default async function Home({
   return (
     <div className="home-animated-bg min-h-screen text-slate-950">
       <header className="sticky top-0 z-10 border-b border-sky-200/40 bg-white/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2">
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/brand/instaup-logo.svg"
+              src="/brand/logo2.png"
               alt="云秒嗒 INSTAUP"
-              width={170}
-              height={52}
+              width={150}
+              height={32}
+              className="h-8 w-auto"
               priority
             />
           </Link>
           <nav className="flex items-center gap-2">
             <Link
               href="/guide"
-              className="rounded-xl border border-sky-200/60 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
+              className="rounded-xl border border-sky-200/60 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
             >
               用户指引
             </Link>
