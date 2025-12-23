@@ -314,7 +314,30 @@ export async function syncUpstreamOnce() {
     for (const a of apps) {
       const categoryName = a.label || "应用";
       const categorySlug = safeSlug(categoryName, "cat");
-      const appSlug = safeSlug(a.name, "app");
+      const canonicalSlug = safeSlug(a.name, "app");
+
+      // Prefer an existing app (by name) to keep its slug stable (e.g. manual test slug like "ai-ai-ai"),
+      // otherwise fall back to canonical slug derived from name.
+      const candidates = await prisma.app.findMany({
+        where: {
+          OR: [
+            { slug: canonicalSlug },
+            { name: a.name },
+            // Some legacy rows may have polluted names (e.g. name contains description/arrow).
+            // Use a conservative contains() match to recover and normalize them.
+            { name: { contains: a.name } },
+          ],
+        },
+        select: { slug: true },
+        take: 5,
+      });
+      const preferredExistingSlug =
+        candidates.find((c) => c.slug && !c.slug.startsWith("app-"))?.slug ??
+        candidates.find((c) => c.slug === canonicalSlug)?.slug ??
+        candidates[0]?.slug ??
+        canonicalSlug;
+
+      const appSlug = preferredExistingSlug;
       seenAppSlugs.add(appSlug);
 
       const category = await prisma.category.upsert({
@@ -329,12 +352,14 @@ export async function syncUpstreamOnce() {
           name: a.name,
           description: a.description ?? "",
           categoryId: category.id,
+          status: "ACTIVE",
         },
         create: {
           name: a.name,
           slug: appSlug,
           description: a.description ?? "",
           categoryId: category.id,
+          status: "ACTIVE",
         },
       });
       stats.appsUpserted += 1;
