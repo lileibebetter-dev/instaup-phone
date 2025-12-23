@@ -142,3 +142,35 @@ body::before {
     animation: none;
   }
 }
+
+/* Title cat animation */
+@keyframes catWalkX {
+  0% {
+    transform: translateX(0%) translateY(0px) rotate(-2deg);
+  }
+  25% {
+    transform: translateX(25%) translateY(-4px) rotate(2deg);
+  }
+  50% {
+    transform: translateX(50%) translateY(0px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(75%) translateY(-4px) rotate(2deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(0px) rotate(-2deg);
+  }
+}
+
+.cat-walk {
+  will-change: transform;
+  animation-name: catWalkX;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-walk {
+    animation: none !important;
+  }
+}
