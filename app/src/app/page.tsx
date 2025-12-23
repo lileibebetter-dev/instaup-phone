@@ -15,7 +15,10 @@ export default async function Home({
   let apps = [];
   try {
     [categories, apps] = await Promise.all([
-      prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+      prisma.category.findMany({
+        where: { apps: { some: { status: "ACTIVE" } } },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
       prisma.app.findMany({
         where: {
           status: "ACTIVE",

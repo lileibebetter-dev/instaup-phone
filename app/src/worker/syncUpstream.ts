@@ -290,6 +290,7 @@ export async function syncUpstreamOnce() {
     upstreamUrl,
     appsSeen: 0,
     appsUpserted: 0,
+    appsDeactivated: 0,
     iconsUpdated: 0,
     iconsUploaded: 0,
     releasesCreated: 0,
@@ -308,11 +309,13 @@ export async function syncUpstreamOnce() {
       if (!a.iconUrl) continue;
       iconUrlCounts.set(a.iconUrl, (iconUrlCounts.get(a.iconUrl) ?? 0) + 1);
     }
+    const seenAppSlugs = new Set<string>();
 
     for (const a of apps) {
       const categoryName = a.label || "应用";
       const categorySlug = safeSlug(categoryName, "cat");
       const appSlug = safeSlug(a.name, "app");
+      seenAppSlugs.add(appSlug);
 
       const category = await prisma.category.upsert({
         where: { slug: categorySlug },
@@ -485,6 +488,19 @@ export async function syncUpstreamOnce() {
       } finally {
         await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
       }
+    }
+
+    // Strict align with upstream: deactivate apps not present in the latest upstream list.
+    // Frontend only shows ACTIVE apps, so "extra" local apps will disappear after this.
+    if (seenAppSlugs.size > 0) {
+      const deactivated = await prisma.app.updateMany({
+        where: {
+          status: "ACTIVE",
+          slug: { notIn: Array.from(seenAppSlugs) },
+        },
+        data: { status: "INACTIVE" },
+      });
+      stats.appsDeactivated = deactivated.count;
     }
 
     await prisma.syncLog.update({
