@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { AnimatedTitle } from "./components/AnimatedTitle";
+import { HeroVideo } from "./components/HeroVideo";
 
 export const dynamic = "force-dynamic";
 
@@ -73,12 +74,23 @@ export default async function Home({
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10">
-        <section className="relative overflow-hidden rounded-2xl border border-sky-200/40 bg-white/55 p-8 text-center shadow-[0_12px_40px_-22px_rgba(2,132,199,0.45)] backdrop-blur-xl">
+        <section className="relative overflow-hidden rounded-2xl border border-sky-200/40 bg-white/55 p-8 shadow-[0_12px_40px_-22px_rgba(2,132,199,0.45)] backdrop-blur-xl">
           <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl" />
           <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
-          <h1 className="mt-2 text-center text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
-            <AnimatedTitle text="云秒嗒AI手机应用中心" />
-          </h1>
+          <div className="grid gap-8 md:grid-cols-2 md:items-center">
+            <div className="text-center md:text-left">
+              <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
+                <AnimatedTitle text="云秒嗒AI手机应用中心" />
+              </h1>
+              <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+                选择应用进入详情页下载，或扫码在手机上直接下载安装包。
+              </p>
+            </div>
+
+            <div className="mx-auto w-full max-w-xl">
+              <HeroVideo />
+            </div>
+          </div>
         </section>
 
         <section className="mt-10">
