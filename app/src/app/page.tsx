@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,28 @@ export default async function Home({
 
   return (
     <div className="home-animated-bg min-h-screen text-slate-950">
+      <header className="sticky top-0 z-10 border-b border-sky-200/40 bg-white/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/brand/instaup-logo.svg"
+              alt="云秒嗒 INSTAUP"
+              width={170}
+              height={52}
+              priority
+            />
+          </Link>
+          <nav className="flex items-center gap-2">
+            <Link
+              href="/guide"
+              className="rounded-xl border border-sky-200/60 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
+            >
+              用户指引
+            </Link>
+          </nav>
+        </div>
+      </header>
+
       <main className="mx-auto max-w-6xl px-4 py-10">
         <section className="relative overflow-hidden rounded-2xl border border-sky-200/40 bg-white/55 p-8 text-center shadow-[0_12px_40px_-22px_rgba(2,132,199,0.45)] backdrop-blur-xl">
           <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl" />
