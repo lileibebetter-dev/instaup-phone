@@ -18,10 +18,27 @@ type UpstreamApp = {
   label?: string; // 官方开发 / 第三方工具 / root必备 ...
   description?: string;
   detailUrl?: string;
+  iconUrl?: string; // upstream icon url (absolute)
 };
 
 function absUrl(href: string, base: string) {
   return new URL(href, base).toString();
+}
+
+function isLikelyImageUrl(href: string) {
+  const h = href.trim();
+  if (!h) return false;
+  if (h.startsWith("data:")) return false;
+  const lower = h.toLowerCase();
+  return (
+    lower.includes(".png") ||
+    lower.includes(".jpg") ||
+    lower.includes(".jpeg") ||
+    lower.includes(".webp") ||
+    lower.includes(".gif") ||
+    lower.includes(".svg") ||
+    lower.includes("icon")
+  );
 }
 
 async function fetchText(url: string) {
@@ -40,6 +57,12 @@ function extractAppsFromListHtml(html: string, baseUrl: string): UpstreamApp[] {
     .each((_, el) => {
       const href = $(el).attr("href");
       const card = $(el).closest("div");
+      const rawIcon =
+        card.find("img").first().attr("src") ||
+        card.find("img").first().attr("data-src") ||
+        card.find("img").first().attr("data-original") ||
+        "";
+      const iconUrl = rawIcon && isLikelyImageUrl(rawIcon) ? absUrl(rawIcon, baseUrl) : undefined;
       const name =
         card.find("h1,h2,h3,h4,strong").first().text().trim() ||
         $(el).closest("a").text().replace("查看详情", "").trim();
@@ -61,6 +84,7 @@ function extractAppsFromListHtml(html: string, baseUrl: string): UpstreamApp[] {
         label,
         description,
         detailUrl: href ? absUrl(href, baseUrl) : undefined,
+        iconUrl,
       });
     });
 
@@ -72,7 +96,13 @@ function extractAppsFromListHtml(html: string, baseUrl: string): UpstreamApp[] {
       const card = $(el).closest("div");
       const text = card.text().replace(/\s+/g, " ").trim();
       const labelMatch = text.match(/(官方开发|第三方工具|root必备)/);
-      apps.push({ name, label: labelMatch?.[1], description: text });
+      const rawIcon =
+        card.find("img").first().attr("src") ||
+        card.find("img").first().attr("data-src") ||
+        card.find("img").first().attr("data-original") ||
+        "";
+      const iconUrl = rawIcon && isLikelyImageUrl(rawIcon) ? absUrl(rawIcon, baseUrl) : undefined;
+      apps.push({ name, label: labelMatch?.[1], description: text, iconUrl });
     });
   }
 
@@ -109,15 +139,69 @@ async function findApkLinkFromDetailPage(detailUrl: string) {
   return absUrl(link, detailUrl);
 }
 
-async function downloadToTempFile(url: string) {
+function contentTypeFromExt(ext: string) {
+  switch (ext.toLowerCase()) {
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".svg":
+      return "image/svg+xml";
+    default:
+      return "application/octet-stream";
+  }
+}
+
+async function findIconLinkFromDetailPage(detailUrl: string, appName?: string) {
+  const html = await fetchText(detailUrl);
+  const $ = cheerio.load(html);
+  const candidates = $("img")
+    .map((_, el) => $(el).attr("src") ?? "")
+    .get()
+    .map((h) => h.trim())
+    .filter((h) => !!h && isLikelyImageUrl(h));
+
+  if (candidates.length === 0) return null;
+
+  const lowerName = (appName ?? "").trim().toLowerCase();
+  const pick = candidates
+    .map((h) => {
+      const l = h.toLowerCase();
+      let score = 0;
+      if (l.includes("icon")) score += 3;
+      if (l.includes("logo")) score += 2;
+      if (lowerName && l.includes(lowerName)) score += 2;
+      if (l.includes(".svg")) score += 1;
+      if (l.includes(".png")) score += 1;
+      return { h, score };
+    })
+    .sort((a, b) => b.score - a.score)[0]?.h;
+
+  return pick ? absUrl(pick, detailUrl) : null;
+}
+
+async function downloadToTempFile(
+  url: string,
+  opts?: { fallbackExt?: string; fallbackBasename?: string },
+) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "yunmiaoda-sync-"));
   const filename = (() => {
     try {
       const u = new URL(url);
       const base = path.basename(u.pathname);
-      return base || `download-${crypto.randomUUID()}.apk`;
+      if (base) return base;
+      const ext = opts?.fallbackExt ?? "";
+      const name = opts?.fallbackBasename ?? `download-${crypto.randomUUID()}`;
+      return ext && !name.endsWith(ext) ? `${name}${ext}` : name;
     } catch {
-      return `download-${crypto.randomUUID()}.apk`;
+      const ext = opts?.fallbackExt ?? "";
+      const name = opts?.fallbackBasename ?? `download-${crypto.randomUUID()}`;
+      return ext && !name.endsWith(ext) ? `${name}${ext}` : name;
     }
   })();
   const filePath = path.join(dir, filename);
@@ -141,6 +225,18 @@ export async function syncUpstreamOnce() {
   // Check if OSS is configured
   let ossAvailable = false;
   try {
+    // Treat common placeholder values as "not configured"
+    const bucket = (process.env.OSS_BUCKET ?? "").toLowerCase();
+    const keyId = (process.env.OSS_ACCESS_KEY_ID ?? "").toLowerCase();
+    const keySecret = (process.env.OSS_ACCESS_KEY_SECRET ?? "").toLowerCase();
+    const region = (process.env.OSS_REGION ?? "").toLowerCase();
+    const looksPlaceholder =
+      !bucket ||
+      bucket.includes("your-bucket") ||
+      keyId.includes("your-access-key") ||
+      keySecret.includes("your-access-key") ||
+      region.includes("oss-cn-hangzhou"); // often left as example in templates
+    if (looksPlaceholder) throw new Error("OSS placeholder config detected");
     getOssClient();
     ossAvailable = true;
   } catch (e) {
@@ -151,8 +247,11 @@ export async function syncUpstreamOnce() {
     upstreamUrl,
     appsSeen: 0,
     appsUpserted: 0,
+    iconsUpdated: 0,
+    iconsUploaded: 0,
     releasesCreated: 0,
     releasesSkipped: 0,
+    ossUploadDisabledReason: "",
     errors: 0,
     ossAvailable,
   };
@@ -189,6 +288,72 @@ export async function syncUpstreamOnce() {
       });
       stats.appsUpserted += 1;
 
+      // Sync icon (prefer list icon, fallback to detail page). If OSS is configured, upload icon to OSS.
+      try {
+        let upstreamIconUrl: string | null = a.iconUrl ?? null;
+        if (!upstreamIconUrl && a.detailUrl) {
+          upstreamIconUrl = await findIconLinkFromDetailPage(a.detailUrl, a.name);
+        }
+
+        if (upstreamIconUrl) {
+          if (ossAvailable) {
+            const u = new URL(upstreamIconUrl);
+            const ext = path.extname(u.pathname) || ".png";
+            const { dir, filePath } = await downloadToTempFile(upstreamIconUrl, {
+              fallbackExt: ext,
+              fallbackBasename: `icon-${appSlug}`,
+            });
+            try {
+              const { sha256 } = await sha256File(filePath);
+              const objectKey = `icons/${appSlug}/${sha256.slice(0, 16)}${ext}`;
+              try {
+                const uploaded = await ossUploadFile({
+                  objectKey,
+                  filePath,
+                  contentType: contentTypeFromExt(ext),
+                });
+                if (app.iconUrl !== uploaded.url) {
+                  await prisma.app.update({
+                    where: { id: app.id },
+                    data: { iconUrl: uploaded.url },
+                  });
+                  stats.iconsUpdated += 1;
+                }
+                stats.iconsUploaded += 1;
+              } catch (e: any) {
+                // OSS looks configured but not usable (e.g. bucket missing) → disable uploads, fall back to upstream URL
+                ossAvailable = false;
+                stats.ossAvailable = false;
+                stats.ossUploadDisabledReason =
+                  (typeof e?.code === "string" && e.code) ||
+                  (typeof e?.name === "string" && e.name) ||
+                  "oss upload failed";
+                if (app.iconUrl !== upstreamIconUrl) {
+                  await prisma.app.update({
+                    where: { id: app.id },
+                    data: { iconUrl: upstreamIconUrl },
+                  });
+                  stats.iconsUpdated += 1;
+                }
+              }
+            } finally {
+              await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+            }
+          } else {
+            // No OSS: store absolute upstream URL directly.
+            if (app.iconUrl !== upstreamIconUrl) {
+              await prisma.app.update({
+                where: { id: app.id },
+                data: { iconUrl: upstreamIconUrl },
+              });
+              stats.iconsUpdated += 1;
+            }
+          }
+        }
+      } catch {
+        // icon sync is best-effort
+      }
+
       if (!a.detailUrl) continue;
       
       // Skip APK download/upload if OSS is not configured
@@ -200,7 +365,7 @@ export async function syncUpstreamOnce() {
       if (!apkUrl) continue;
 
       // Download → hash/size → check duplicates → upload → create Release
-      const { dir, filePath, filename } = await downloadToTempFile(apkUrl);
+      const { dir, filePath, filename } = await downloadToTempFile(apkUrl, { fallbackExt: ".apk" });
       try {
         const { sha256, size } = await sha256File(filePath);
 
@@ -225,11 +390,24 @@ export async function syncUpstreamOnce() {
         const resolvedVersionName = versionName ?? `v${nextVersionCode}`;
         const objectKey = `apks/${appSlug}/${resolvedVersionName}-${nextVersionCode}-${sha256.slice(0, 8)}.apk`;
 
-        const uploaded = await ossUploadFile({
-          objectKey,
-          filePath,
-          contentType: "application/vnd.android.package-archive",
-        });
+        let uploaded: { url: string } | null = null;
+        try {
+          uploaded = await ossUploadFile({
+            objectKey,
+            filePath,
+            contentType: "application/vnd.android.package-archive",
+          });
+        } catch (e: any) {
+          // OSS looks configured but not usable → disable and skip remaining uploads
+          ossAvailable = false;
+          stats.ossAvailable = false;
+          stats.ossUploadDisabledReason =
+            (typeof e?.code === "string" && e.code) ||
+            (typeof e?.name === "string" && e.name) ||
+            "oss upload failed";
+          stats.releasesSkipped += 1;
+          continue;
+        }
 
         await prisma.release.create({
           data: {
