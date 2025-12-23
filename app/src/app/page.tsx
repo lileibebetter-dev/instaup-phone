@@ -58,7 +58,7 @@ export default async function Home({
               href="https://aiagent.instaup.cn/pc/"
               target="_blank"
               rel="noreferrer"
-              className="rounded-xl border border-sky-200/60 bg-white px-3 py-1.5 text-[13px] font-semibold text-slate-800 shadow-sm shadow-sky-100/70 transition hover:border-sky-300/70 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
+              className="px-1 text-[13px] font-semibold text-slate-700 transition hover:text-slate-950 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 focus-visible:ring-offset-2"
             >
               AI数智平台
             </a>
