@@ -1,9 +1,22 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default function GuidePage() {
-  const external = process.env.USER_GUIDE_URL?.trim() || "";
+export default async function GuidePage() {
+  // Backwards compatibility: a single env link can be shown as a pinned item.
+  const envExternal = process.env.USER_GUIDE_URL?.trim() || "";
+
+  let guides: any[] = [];
+  try {
+    guides = await prisma.guide.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }, { updatedAt: "desc" }],
+      take: 200,
+    });
+  } catch (e) {
+    console.error("Failed to load guides:", e);
+  }
 
   return (
     <div className="min-h-screen text-slate-950">
@@ -21,45 +34,72 @@ export default function GuidePage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-950">
             云秒嗒AI手机应用中心 · 使用指南
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            这里用于放置用户使用说明。后续可改成飞书文档链接或完善成更完整的新页面。
-          </p>
+          <p className="mt-2 text-sm text-slate-600">请选择你需要的指引文章。</p>
 
-          {external ? (
-            <div className="mt-6 rounded-xl border border-sky-200/60 bg-sky-50 px-4 py-3">
-              <div className="text-sm font-semibold text-slate-900">飞书/外部指引链接</div>
-              <a
-                href={external}
-                className="mt-2 block break-all text-sm font-semibold text-sky-700 hover:underline"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {external}
-              </a>
-            </div>
-          ) : (
-            <div className="mt-6 rounded-xl border border-sky-200/60 bg-sky-50 px-4 py-3 text-sm text-slate-700">
-              还未配置飞书链接。运维可在环境变量中设置 <code className="font-mono">USER_GUIDE_URL</code>{" "}
-             （例如飞书文档 URL），此页将自动展示链接入口。
-            </div>
-          )}
-
-          <div className="mt-8 grid gap-3">
-            <div className="rounded-xl border border-black/5 bg-white p-4">
-              <div className="text-sm font-semibold">1）下载应用</div>
-              <div className="mt-1 text-sm text-slate-600">
-                在首页选择应用，进入详情页后点击“立即下载”，或使用二维码用手机扫码下载。
-              </div>
-            </div>
-            <div className="rounded-xl border border-black/5 bg-white p-4">
-              <div className="text-sm font-semibold">2）常见问题</div>
-              <div className="mt-1 text-sm text-slate-600">
-                若下载链接不可用，请联系管理员检查同步状态与版本发布情况。
-              </div>
-            </div>
-          </div>
+          <GuidesList guides={guides} envExternal={envExternal} />
         </section>
       </main>
+    </div>
+  );
+}
+
+function GuidesList({
+  guides,
+  envExternal,
+}: {
+  guides: any[];
+  envExternal: string;
+}) {
+  return (
+    <div className="mt-6 space-y-4">
+      {envExternal ? (
+        <a
+          href={envExternal}
+          target="_blank"
+          rel="noreferrer"
+          className="block rounded-2xl border border-sky-200/60 bg-sky-50 px-5 py-4 transition hover:bg-sky-100/60"
+        >
+          <div className="text-sm font-semibold text-slate-950">飞书指引总入口</div>
+          <div className="mt-1 break-all text-xs text-slate-600">{envExternal}</div>
+        </a>
+      ) : null}
+
+      <div className="grid gap-3">
+        {guides.map((g: any) => {
+          const isExternal = !!(g.externalUrl && String(g.externalUrl).trim());
+          const href = isExternal ? g.externalUrl : `/guide/${g.slug}`;
+          const rel = isExternal ? "noreferrer" : undefined;
+          const target = isExternal ? "_blank" : undefined;
+          return (
+            <a
+              key={g.id}
+              href={href}
+              target={target}
+              rel={rel}
+              className="group block rounded-2xl border border-black/5 bg-white px-5 py-4 transition hover:border-sky-200/60 hover:bg-sky-50/60"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="truncate text-base font-semibold text-slate-950">
+                    {g.title}
+                  </div>
+                  <div className="mt-1 line-clamp-2 text-sm text-slate-600">
+                    {g.summary || (isExternal ? "外链指引（飞书/网页）" : "站内指引")}
+                  </div>
+                </div>
+                <div className="shrink-0 text-sm font-semibold text-sky-700 transition group-hover:translate-x-0.5">
+                  查看 →
+                </div>
+              </div>
+            </a>
+          );
+        })}
+        {guides.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-sky-200/70 bg-white px-5 py-6 text-sm text-slate-600">
+            暂无已上线的指引。请联系管理员在后台发布。
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

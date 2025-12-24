@@ -22,6 +22,9 @@ export default function AdminPanelLayout({
               <Link href="/admin/sync" className="hover:text-zinc-950">
                 同步
               </Link>
+                <Link href="/admin/guides" className="hover:text-zinc-950">
+                  指引
+                </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3">

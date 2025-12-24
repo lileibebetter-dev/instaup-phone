@@ -18,6 +18,11 @@ enum SyncStatus {
   FAILED
 }
 
+enum GuideStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum OrderStatus {
   PENDING
   PAID
@@ -93,6 +98,23 @@ model SyncLog {
   finishedAt DateTime?
   message    String     @default("")
   stats      Json?
+}
+
+model Guide {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  summary     String      @default("")
+  content     String      @default("")
+  externalUrl String      @default("")
+  sortOrder   Int         @default(0)
+  status      GuideStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status])
+  @@index([sortOrder])
 }
 
 model Order {
