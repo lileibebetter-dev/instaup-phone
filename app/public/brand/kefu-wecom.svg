@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360" viewBox="0 0 360 360">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0f9ff"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="360" height="360" rx="28" fill="url(#bg)"/>
+  <rect x="26" y="26" width="308" height="308" rx="22" fill="#ffffff" stroke="#bae6fd" stroke-width="3"/>
+
+  <!-- Simple placeholder "QR-like" pattern -->
+  <g fill="#0f172a" opacity="0.9">
+    <rect x="54" y="54" width="62" height="62" rx="10"/>
+    <rect x="244" y="54" width="62" height="62" rx="10"/>
+    <rect x="54" y="244" width="62" height="62" rx="10"/>
+    <rect x="76" y="76" width="18" height="18" fill="#ffffff" opacity="1"/>
+    <rect x="266" y="76" width="18" height="18" fill="#ffffff" opacity="1"/>
+    <rect x="76" y="266" width="18" height="18" fill="#ffffff" opacity="1"/>
+    <rect x="132" y="140" width="12" height="12"/>
+    <rect x="152" y="140" width="12" height="12"/>
+    <rect x="172" y="140" width="12" height="12"/>
+    <rect x="132" y="160" width="12" height="12"/>
+    <rect x="172" y="160" width="12" height="12"/>
+    <rect x="152" y="180" width="12" height="12"/>
+    <rect x="196" y="196" width="12" height="12"/>
+    <rect x="212" y="180" width="12" height="12"/>
+    <rect x="196" y="164" width="12" height="12"/>
+    <rect x="116" y="204" width="12" height="12"/>
+    <rect x="140" y="216" width="12" height="12"/>
+    <rect x="160" y="212" width="12" height="12"/>
+  </g>
+
+  <text x="180" y="178" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="14" fill="#334155">
+    请替换为企业微信二维码
+  </text>
+  <text x="180" y="202" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas" font-size="12" fill="#64748b">
+    public/brand/kefu-wecom.png
+  </text>
+</svg>
+
+

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SupportFloat } from "./components/SupportFloat";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +29,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased selection:bg-sky-200 selection:text-slate-900`}
       >
         {children}
+        <SupportFloat />
       </body>
     </html>
   );
