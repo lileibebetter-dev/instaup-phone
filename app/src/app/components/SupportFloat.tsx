@@ -113,7 +113,13 @@ export function SupportFloat() {
           aria-expanded={open}
           aria-label="打开客服"
         >
-          <span className="text-base">客服</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/kefu-cat.svg"
+            alt=""
+            className="h-7 w-7 opacity-90 transition group-hover:opacity-100"
+          />
+          <span className="sr-only">客服</span>
         </button>
       </div>
     </div>
